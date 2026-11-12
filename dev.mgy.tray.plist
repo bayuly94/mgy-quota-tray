@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>dev.mgy.tray</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/macbookpro/.local/bin/mgy-tray</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/Users/macbookpro/.local/share/mgy-tray/mgy-tray.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/macbookpro/.local/share/mgy-tray/mgy-tray.err.log</string>
+    <key>ProcessType</key>
+    <string>Interactive</string>
+</dict>
+</plist>
