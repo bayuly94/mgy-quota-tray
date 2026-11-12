@@ -56,29 +56,29 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func drawCircleBattery(pct: Double) -> NSImage {
-        let size = NSSize(width: 18, height: 18)
+        let size = NSSize(width: 20, height: 18)
         let image = NSImage(size: size, flipped: false) { rect in
             guard let ctx = NSGraphicsContext.current?.cgContext else { return false }
             
-            let center = CGPoint(x: 9, y: 8.5)
-            let radius: CGFloat = 6.0
-            let lineWidth: CGFloat = 1.8
+            let center = CGPoint(x: 10, y: 8.5)
+            let radius: CGFloat = 6.2
+            let lineWidth: CGFloat = 2.6
             
-            // 1. Background ring track (subtle monochrome)
+            // 1. Background ring track (semi-transparent template)
             ctx.setStrokeColor(NSColor.black.withAlphaComponent(0.25).cgColor)
             ctx.setLineWidth(lineWidth)
             ctx.strokeEllipse(in: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2))
             
-            // 2. Battery terminal cap di atas (12 o'clock)
-            let capWidth: CGFloat = 3.2
-            let capHeight: CGFloat = 1.3
-            let capRect = CGRect(x: center.x - capWidth / 2, y: center.y + radius + 0.6, width: capWidth, height: capHeight)
-            let capPath = CGPath(roundedRect: capRect, cornerWidth: 0.6, cornerHeight: 0.6, transform: nil)
+            // 2. Battery terminal cap di atas (12 o'clock) yang proporsional dan tegas
+            let capWidth: CGFloat = 3.6
+            let capHeight: CGFloat = 1.6
+            let capRect = CGRect(x: center.x - capWidth / 2, y: center.y + radius + 0.8, width: capWidth, height: capHeight)
+            let capPath = CGPath(roundedRect: capRect, cornerWidth: 0.8, cornerHeight: 0.8, transform: nil)
             ctx.setFillColor(NSColor.black.cgColor)
             ctx.addPath(capPath)
             ctx.fillPath()
             
-            // 3. Progress arc (searah jarum jam dari jam 12)
+            // 3. Progress arc tebal (searah jarum jam dari jam 12)
             let clampedPct = max(0.0, min(100.0, pct))
             if clampedPct > 0 {
                 let startAngle: CGFloat = CGFloat.pi / 2
@@ -97,6 +97,47 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return true
         }
         image.isTemplate = true
+        return image
+    }
+
+    func drawProgressBar(pct: Double, width: CGFloat = 68, height: CGFloat = 10) -> NSImage {
+        let image = NSImage(size: NSSize(width: width, height: height))
+        image.lockFocus()
+        
+        let clamped = CGFloat(max(0.0, min(100.0, pct)))
+        let radius: CGFloat = height / 2
+        let bgRect = NSRect(x: 0, y: 0, width: width, height: height)
+        
+        // Background track pill
+        let bgPath = NSBezierPath(roundedRect: bgRect, xRadius: radius, yRadius: radius)
+        NSColor.labelColor.withAlphaComponent(0.12).setFill()
+        bgPath.fill()
+        
+        if clamped > 0 {
+            let fillWidth = max(height, width * (clamped / 100.0))
+            let fillRect = NSRect(x: 0, y: 0, width: fillWidth, height: height)
+            let fillPath = NSBezierPath(roundedRect: fillRect, xRadius: radius, yRadius: radius)
+            
+            let barColor: NSColor
+            if clamped > 70 {
+                // Full Hijau (> 70%)
+                barColor = NSColor(srgbRed: 0.18, green: 0.80, blue: 0.44, alpha: 1.0)
+            } else if clamped > 40 {
+                // Kuning (40% - 70%)
+                barColor = NSColor(srgbRed: 0.95, green: 0.77, blue: 0.06, alpha: 1.0)
+            } else if clamped > 15 {
+                // Orange (15% - 40%)
+                barColor = NSColor(srgbRed: 0.96, green: 0.52, blue: 0.12, alpha: 1.0)
+            } else {
+                // Merah (<= 15%)
+                barColor = NSColor(srgbRed: 0.92, green: 0.26, blue: 0.21, alpha: 1.0)
+            }
+            
+            barColor.setFill()
+            fillPath.fill()
+        }
+        
+        image.unlockFocus()
         return image
     }
 
@@ -182,13 +223,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem.menu = menu
     }
 
-    func makeProgressBar(pct: Double, length: Int = 10) -> String {
-        let clamped = max(0.0, min(100.0, pct))
-        let filled = Int(round((clamped / 100.0) * Double(length)))
-        let empty = length - filled
-        return String(repeating: "■", count: filled) + String(repeating: "□", count: empty)
-    }
-
     func updateUI() {
         guard let button = statusItem.button else { return }
         
@@ -205,13 +239,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         formatter.dateFormat = "HH:mm:ss"
         let timeStr = lastUpdated != nil ? formatter.string(from: lastUpdated!) : "-"
         
-        let header = NSMenuItem(title: String(format: "mgy Quota (Rata-rata: %.1f%% | \(timeStr))", avgPct), action: nil, keyEquivalent: "")
+        let header = NSMenuItem(title: String(format: "mgy Quota  •  Rata-rata: %.1f%%  (%@)", avgPct, timeStr), action: nil, keyEquivalent: "")
         header.isEnabled = false
         menu.addItem(header)
         
         let best = profiles.first(where: { ($0.authenticated ?? true) && $0.error == nil })
         if let best = best {
-            let bestItem = NSMenuItem(title: String(format: "Akun Tertinggi: %@ (%.1f%%)", best.profile, best.maxPct), action: #selector(launchBestProfile), keyEquivalent: "")
+            let bestItem = NSMenuItem(title: String(format: "Akun Rekomendasi: %@ (%.1f%%)", best.profile, best.maxPct), action: #selector(launchBestProfile), keyEquivalent: "")
             bestItem.target = self
             bestItem.toolTip = "Buka terminal: mgy auto"
             menu.addItem(bestItem)
@@ -230,16 +264,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             let isAuth = p.authenticated ?? true
             let hasErr = p.error != nil || !isAuth
             
-            let bar = makeProgressBar(pct: pPct, length: 8)
-            let title: String
+            let item: NSMenuItem
             if hasErr {
-                title = "[-] \(pName) (Tidak terautentikasi)"
+                item = NSMenuItem(title: "[-] \(pName) (Error / Unauth)", action: nil, keyEquivalent: "")
             } else {
                 let tierStr = p.tier != nil ? " [\(p.tier!)]" : ""
-                title = String(format: "[•] %-18@%@ %5.1f%% %@", pName, tierStr, pPct, bar)
+                let label = String(format: "%-18@%@ %5.1f%%", pName, tierStr, pPct)
+                item = NSMenuItem(title: label, action: nil, keyEquivalent: "")
+                item.image = drawProgressBar(pct: pPct)
             }
             
-            let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
             let subMenu = NSMenu()
             
             // Submenu details
@@ -253,8 +287,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     let mName = m.name ?? m.id ?? "Model"
                     let mPct = m.pct ?? 0.0
                     let mReset = m.reset_str ?? "-"
-                    let mTitle = String(format: "• %@: %.1f%% (Reset: %@)", mName, mPct, mReset)
+                    let mTitle = String(format: "%@: %.1f%% (Reset: %@)", mName, mPct, mReset)
                     let mItem = NSMenuItem(title: mTitle, action: nil, keyEquivalent: "")
+                    mItem.image = drawProgressBar(pct: mPct, width: 50, height: 8)
                     mItem.isEnabled = false
                     subMenu.addItem(mItem)
                 }

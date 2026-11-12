@@ -1,6 +1,6 @@
 # mgy-quota-tray
 
-Lightweight native macOS menu bar (tray) app for monitoring [Antigravity](https://github.com/google-deepmind) multi-account quotas from `mgy-quota --json`.
+Lightweight native macOS menu bar (tray) app for monitoring Antigravity multi-account quotas from [multigravity-cli](https://github.com/bayuly94/multigravity-cli/tree/master) (`mgy-quota --json`).
 
 Written purely in Swift with AppKit (no heavy electron, webview, or python runtime needed for the tray).
 
