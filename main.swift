@@ -100,45 +100,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return image
     }
 
-    func drawProgressBar(pct: Double, width: CGFloat = 68, height: CGFloat = 10) -> NSImage {
-        let image = NSImage(size: NSSize(width: width, height: height))
-        image.lockFocus()
-        
-        let clamped = CGFloat(max(0.0, min(100.0, pct)))
-        let radius: CGFloat = height / 2
-        let bgRect = NSRect(x: 0, y: 0, width: width, height: height)
-        
-        // Background track pill
-        let bgPath = NSBezierPath(roundedRect: bgRect, xRadius: radius, yRadius: radius)
-        NSColor.labelColor.withAlphaComponent(0.12).setFill()
-        bgPath.fill()
-        
-        if clamped > 0 {
-            let fillWidth = max(height, width * (clamped / 100.0))
-            let fillRect = NSRect(x: 0, y: 0, width: fillWidth, height: height)
-            let fillPath = NSBezierPath(roundedRect: fillRect, xRadius: radius, yRadius: radius)
-            
-            let barColor: NSColor
-            if clamped > 70 {
-                // Full Hijau (> 70%)
-                barColor = NSColor(srgbRed: 0.18, green: 0.80, blue: 0.44, alpha: 1.0)
-            } else if clamped > 40 {
-                // Kuning (40% - 70%)
-                barColor = NSColor(srgbRed: 0.95, green: 0.77, blue: 0.06, alpha: 1.0)
-            } else if clamped > 15 {
-                // Orange (15% - 40%)
-                barColor = NSColor(srgbRed: 0.96, green: 0.52, blue: 0.12, alpha: 1.0)
-            } else {
-                // Merah (<= 15%)
-                barColor = NSColor(srgbRed: 0.92, green: 0.26, blue: 0.21, alpha: 1.0)
-            }
-            
-            barColor.setFill()
-            fillPath.fill()
+    func makeProgressBar(pct: Double, length: Int = 10) -> String {
+        let clamped = max(0.0, min(100.0, pct))
+        var filled = Int(round((clamped / 100.0) * Double(length)))
+        if clamped > 0.0 && filled == 0 {
+            filled = 1
+        } else if clamped < 100.0 && filled == length {
+            filled = length - 1
         }
-        
-        image.unlockFocus()
-        return image
+        let empty = length - filled
+        return String(repeating: "━", count: filled) + String(repeating: "─", count: empty)
     }
 
     func buildLoadingMenu() {
@@ -258,6 +229,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         listHeader.isEnabled = false
         menu.addItem(listHeader)
         
+        let maxNameLen = max(16, profiles.map { $0.profile.count }.max() ?? 16)
+        let monoFont = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+        let subMonoFont = NSFont.monospacedSystemFont(ofSize: 11.5, weight: .regular)
+        
         for p in profiles {
             let pName = p.profile
             let pPct = p.maxPct
@@ -266,12 +241,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             
             let item: NSMenuItem
             if hasErr {
-                item = NSMenuItem(title: "[-] \(pName) (Error / Unauth)", action: nil, keyEquivalent: "")
-            } else {
-                let tierStr = p.tier != nil ? " [\(p.tier!)]" : ""
-                let label = String(format: "%-18@%@ %5.1f%%", pName, tierStr, pPct)
+                let paddedName = pName.padding(toLength: maxNameLen, withPad: " ", startingAt: 0)
+                let label = "\(paddedName)  [Unauth / Error]"
                 item = NSMenuItem(title: label, action: nil, keyEquivalent: "")
-                item.image = drawProgressBar(pct: pPct)
+                item.attributedTitle = NSAttributedString(string: label, attributes: [.font: monoFont])
+            } else {
+                let tierStr = p.tier != nil ? "[\(p.tier!)]" : ""
+                let paddedName = pName.padding(toLength: maxNameLen, withPad: " ", startingAt: 0)
+                let bar = makeProgressBar(pct: pPct, length: 10)
+                let label = String(format: "%@  %-5s  %@ %5.1f%%", paddedName, (tierStr as NSString).utf8String!, bar, pPct)
+                item = NSMenuItem(title: label, action: nil, keyEquivalent: "")
+                item.attributedTitle = NSAttributedString(string: label, attributes: [.font: monoFont])
             }
             
             let subMenu = NSMenu()
@@ -287,9 +267,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     let mName = m.name ?? m.id ?? "Model"
                     let mPct = m.pct ?? 0.0
                     let mReset = m.reset_str ?? "-"
-                    let mTitle = String(format: "%@: %.1f%% (Reset: %@)", mName, mPct, mReset)
+                    let mBar = makeProgressBar(pct: mPct, length: 10)
+                    let mTitle = String(format: "%-24s  %@ %5.1f%%  (Reset: %@)", (mName as NSString).utf8String!, mBar, mPct, mReset)
                     let mItem = NSMenuItem(title: mTitle, action: nil, keyEquivalent: "")
-                    mItem.image = drawProgressBar(pct: mPct, width: 50, height: 8)
+                    mItem.attributedTitle = NSAttributedString(string: mTitle, attributes: [.font: subMonoFont])
                     mItem.isEnabled = false
                     subMenu.addItem(mItem)
                 }
