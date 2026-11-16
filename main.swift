@@ -41,9 +41,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
         if let button = statusItem.button {
-            button.imagePosition = .imageLeft
+            button.imagePosition = .imageOnly
             button.image = drawCircleBattery(pct: 0)
-            button.title = "--%"
+            button.title = ""
         }
         
         buildLoadingMenu()
@@ -201,7 +201,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let avgPct = validProfiles.isEmpty ? 0.0 : (validProfiles.map { $0.maxPct }.reduce(0.0, +) / Double(validProfiles.count))
         
         button.image = drawCircleBattery(pct: avgPct)
-        button.title = String(format: "%.0f%%", avgPct)
+        button.title = ""
         
         let menu = NSMenu()
         
